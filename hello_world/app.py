@@ -5,7 +5,7 @@ import os
 # import requests
 
 dynamo = boto3.resource('dynamodb', region_name='us-east-1')
-table = dynamo.Table(os.environ['website_hits'])
+table = dynamo.Table(os.environ['Resume-API-MySimpleTable-1D632T2Z29TU4'])
 
 def lambda_handler(event, context):
 
