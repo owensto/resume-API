@@ -1,44 +1,42 @@
-import json
 import boto3
+import json
+import os
 
 # import requests
 
-dynamodb = boto3.resource('dynamodb')
+dynamo = boto3.resource('dynamodb', region_name='us-east-1')
+table = dynamo.Table(os.environ['website_hits'])
 
 def lambda_handler(event, context):
-    """Sample pure Lambda function
 
-    Parameters
-    ----------
-    event: dict, required
-        API Gateway Lambda Proxy Input Format
+    try:
+        # get current value from database
+        print ("[INFO] Retrieving current count from table")
+        resp = table.get_item(Key={'id': 1})
+        current = resp['Item']['visitors']
 
-        Event doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html#api-gateway-simple-proxy-for-lambda-input-format
+        # add 1
+        current += 1
 
-    context: object, required
-        Lambda Context runtime methods and attributes
-
-        Context doc: https://docs.aws.amazon.com/lambda/latest/dg/python-context-object.html
-
-    Returns
-    ------
-    API Gateway Lambda Proxy Output Format: dict
-
-        Return doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html
-    """
-
-    # try:
-    #     ip = requests.get("http://checkip.amazonaws.com/")
-    # except requests.RequestException as e:
-    #     # Send some context about this error to Lambda Logs
-    #     print(e)
-
-    #     raise e
-
-    return {
-        "statusCode": 200,
-        "body": json.dumps({
-            "message": "hello world",
-            # "location": ip.text.replace("\n", "")
-        }),
-    }
+        # update ddb
+        print ("[INFO] Updating table with count")
+        table.update_item(
+            Key={'id': 1},
+            UpdateExpression='SET visitors = :val1',
+            ExpressionAttributeValues={':val1': current}
+        )
+        print ("[INFO] Retrieved count, returning to client")
+        
+        # return to website
+        return {
+            'body': json.dumps({
+                'count': str(current), }),
+            'statusCode': 200,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'application/json',
+                'Access-Control-Allow-Methods': 'OPTIONS,POST',
+                'Access-Control-Allow-Credentials': 'true'
+            },
+        }
+    )
